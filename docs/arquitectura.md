@@ -58,6 +58,34 @@ defender el diseño.
   `try/catch`; si una API no está o está bloqueada, el campo queda en `null`, y
   ese `null` también distingue (p. ej. un navegador que esconde el canvas).
 
+## Algoritmo de correlación (`matching.py`)
+
+- **Peso por dato = `-log2(frecuencia del valor)`** (bits de entropía, criterio
+  EFF). Compartir una zona horaria común aporta ~0 bits; compartir un renderer
+  de GPU raro aporta muchos.
+- **Población chica.** Se combinan dos cosas: (1) suavizado de Laplace sobre la
+  frecuencia observada, con la cardinalidad de cada atributo atada a sus bits a
+  priori (`K = 2^prior_bits`), de modo que prior y suavizado sean coherentes; y
+  (2) una mezcla con la **tabla de pesos a priori** (`PRIOR_BITS`, configurable)
+  ponderada por el tamaño de la población: `w = N/(N+N0)`. Con N chico mandan los
+  priors; con N grande, lo observado. Anda con 3 y con 300 identidades.
+- **Comparaciones tolerantes:** User-Agent ignorando la versión menor (misma
+  familia y versión mayor = 1.0; misma familia, otra mayor = 0.5); fuentes,
+  idiomas, voces y WebRTC por solapamiento de Jaccard; IP con crédito parcial
+  (IP exacta = 1.0; solo coincide la /24 o /64 = 0.6).
+- **Puntaje por nivel = bits coincidentes / bits comparables** (0..1). Dos
+  niveles: *navegador* (canvas, audio, UA, plugins, voces) y *dispositivo* (GPU,
+  pantalla, fuentes, zona horaria, IP, etc.). El titular es
+  `max(navegador, dispositivo)`: alcanza con que uno sea alto. El nivel
+  dispositivo reconoce a la misma persona aunque cambie de navegador.
+- **Umbral configurable** (`MATCH_THRESHOLD`): si ninguna candidata lo supera →
+  "no te reconozco". Se devuelve la mejor, su porcentaje y el top 3.
+- **Explicación:** por cada dato comparado se registra nivel, si coincidió y
+  cuántos bits aportó. Ejemplo real (misma persona, Chrome en el chat y Firefox
+  en el detector): navegador 0.15, dispositivo 1.00 — coinciden GPU (8.7 bits),
+  fuentes (8.0), IP (6.7), pantalla, zona horaria…; difieren canvas, audio y UA
+  (0 bits). Eso es exactamente "un seudónimo no es anonimato".
+
 ## Privacidad (implementación)
 
 - Nada se escribe a disco ni se loguea la IP completa (el access log de uvicorn
