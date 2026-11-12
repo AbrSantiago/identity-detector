@@ -21,8 +21,11 @@ from .models import ChatMessage, Identity, MatchEvent
 
 class Store:
     def __init__(self) -> None:
-        # Clave: fp_id. Valor: Identity. El upsert se hace por (nickname, fp_id)
-        # pero indexamos por fp_id porque es lo que borra "borrar mis datos".
+        # Clave: "{fp_id}::{nickname}". Valor: Identity.
+        # Una participación es única por (nickname, fp_id): el mismo navegador
+        # usado con dos nicknames distintos son dos identidades (dos seudónimos
+        # linkeables, justo lo que la demo quiere mostrar). "Borrar mis datos"
+        # elimina todas las identidades de un mismo fp_id.
         self._identities: dict[str, Identity] = {}
         self._chat: deque[ChatMessage] = deque(maxlen=settings.chat_history_limit)
         self._matches: deque[MatchEvent] = deque(maxlen=settings.match_history_limit)
@@ -30,22 +33,27 @@ class Store:
 
     # --- Identidades ---
 
+    @staticmethod
+    def _key(nickname: str, fp_id: str) -> str:
+        return f"{fp_id}::{nickname}"
+
     async def upsert_identity(self, identity: Identity) -> Identity:
-        """Inserta o actualiza una identidad.
+        """Inserta o actualiza una identidad por (nickname, fp_id).
 
         Si ya existe una identidad con el mismo nickname y el mismo fp_id, la
         actualizamos (misma persona reconectándose) en vez de duplicar. Así
         cada participación única queda registrada una sola vez.
         """
         async with self._lock:
-            existing = self._identities.get(identity.fingerprint.fp_id)
-            if existing and existing.nickname == identity.nickname:
+            key = self._key(identity.nickname, identity.fp_id)
+            existing = self._identities.get(key)
+            if existing:
                 existing.fingerprint = identity.fingerprint
                 existing.network = identity.network
                 existing.avatar = identity.avatar
                 existing.updated_at = datetime.now(timezone.utc)
                 return existing
-            self._identities[identity.fingerprint.fp_id] = identity
+            self._identities[key] = identity
             return identity
 
     async def list_identities(self) -> list[Identity]:
@@ -53,20 +61,17 @@ class Store:
             return list(self._identities.values())
 
     async def delete_by_fp(self, fp_id: str) -> int:
-        """Borra la identidad y los matches asociados a un fp_id.
+        """Borra todas las identidades asociadas a un fp_id.
 
-        Devuelve cuántos elementos se borraron (identidad + eventos), para que
-        el endpoint pueda confirmar y los tests verificar.
+        Devuelve cuántas identidades se borraron, para que el endpoint pueda
+        confirmar y los tests verificar. Como varias participaciones (nicknames)
+        pueden compartir el mismo fp_id, borramos todas.
         """
         async with self._lock:
-            removed = 0
-            if fp_id in self._identities:
-                del self._identities[fp_id]
-                removed += 1
-            # Los eventos de match no guardan fp_id crudo por privacidad, así
-            # que el borrado de identidad es lo que elimina el rastro. Dejamos
-            # el hook por si se decide indexar eventos por fp en el futuro.
-            return removed
+            keys = [k for k, v in self._identities.items() if v.fp_id == fp_id]
+            for k in keys:
+                del self._identities[k]
+            return len(keys)
 
     # --- Chat ---
 

@@ -22,6 +22,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
+from . import chat
 from .config import settings
 from .store import store
 
@@ -84,6 +85,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# WS /ws/chat
+app.include_router(chat.router, tags=["chat"])
 
 
 @app.get("/health", tags=["infra"])
