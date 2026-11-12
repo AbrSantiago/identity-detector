@@ -2,7 +2,10 @@
 name = "identity-detector-backend"
 version = "0.1.0"
 description = "Backend del detector de identidad (TP3 Seguridad): FastAPI, estado en memoria, correlación de fingerprint + red."
-requires-python = ">=3.10"
+# Tope en <3.14: con 3.14 todavía no hay wheels de pydantic-core y uv intenta
+# compilarlo desde Rust (falla sin el linker de MSVC). Fijamos 3.12 en
+# .python-version; uv la descarga solo si no la tenés.
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "fastapi==0.115.6",
     "uvicorn[standard]==0.34.0",
