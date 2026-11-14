@@ -23,9 +23,11 @@ defender el diseño.
   Motivo: con 3.14 todavía no hay wheels de `pydantic-core` y `uv` intenta
   compilarlo desde Rust, lo que falla en Windows sin el linker de MSVC. `uv`
   descarga una 3.12 administrada automáticamente.
-- **Despliegue con Cloudflare Tunnel en vez de Caddy** (decisión del grupo).
-  Cloudflare aporta el HTTPS de borde y `cloudflared` expone `api.`, `chat.` y
-  `detector.` sin abrir puertos. Se detalla en la fase 7.
+- **Despliegue: sin implementar.** El grupo había considerado Cloudflare Tunnel
+  en vez de Caddy, pero el despliegue (docker-compose, proxy inverso) quedó
+  fuera de lo implementado en este repo. Lo que sí hay es la ejecución local
+  con un comando (`run_local.py`): un proceso que despacha por `Host` para que
+  chat y detector sean orígenes distintos, sin modificar el backend.
 - **Estado en memoria, un solo worker.** El estado vive en el proceso; con
   varios workers cada uno tendría su copia. Es intencional para la demo.
 
@@ -36,9 +38,12 @@ defender el diseño.
   que ese dato se pierde en producción. Se recolecta igual porque en local sí
   distingue implementaciones de cliente.
 - **IP real detrás de proxy:** el backend solo lee `X-Forwarded-For` si la
-  conexión viene de una IP en `TRUSTED_PROXIES`. Detrás de Cloudflare hay que
-  cargar los rangos de Cloudflare (la IP real llega en `CF-Connecting-IP` /
-  `X-Forwarded-For`). En local, conexión directa, `TRUSTED_PROXIES` vacío.
+  conexión viene de una IP en `TRUSTED_PROXIES`. En local, conexión directa,
+  `TRUSTED_PROXIES` vacío. Detrás de un proxy real, `TRUSTED_PROXIES` debe
+  contener la IP o red **desde la que el proxy se conecta al backend** (p. ej.
+  la red de Docker), no rangos públicos. Límite abierto: el backend solo lee
+  `X-Forwarded-For`; si el proxy entrega la IP real en otro header (p. ej.
+  `CF-Connecting-IP` de Cloudflare), hay que adaptar `network.py`. Sin probar.
 - **WebRTC:** hoy los navegadores ocultan las IPs locales detrás de nombres mDNS
   (`xxxx.local`); el tracker las ignora a propósito. Lo que sí se obtiene es la
   IP pública que revela el STUN, que es lo relevante para el caso de la VPN.
@@ -88,8 +93,13 @@ defender el diseño.
 
 ## Privacidad (implementación)
 
-- Nada se escribe a disco ni se loguea la IP completa (el access log de uvicorn
-  se desactiva en el arranque; ver fase 7).
+- Nada se escribe a disco ni se loguea la IP completa. `main.py` instala filtros
+  que descartan el access log HTTP de uvicorn y las líneas de WebSocket
+  (`('ip', puerto) - "WebSocket /ruta"`), que salen por otro logger. Vale con
+  cualquier forma de lanzar el backend; hay tests en `test_logging.py`.
+- **Borrado:** `DELETE /api/me` borra todas las identidades del `fp_id`. El
+  historial de matches no guarda `fp_id` ni IP completa (solo resultado y red
+  /24 o /64), por lo que no se puede atribuir ni borrar por visitante; expira por TTL.
 - TTL de los datos en memoria (`DATA_TTL_HOURS`), barrido por tarea de fondo.
 - CORS restringido a `ALLOWED_ORIGINS`. Sin cookies (no se usa `Domain=`); el
   `fp_id` viaja en el cuerpo, no en estado compartido entre frontends.
