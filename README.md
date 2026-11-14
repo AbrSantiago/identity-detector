@@ -71,6 +71,19 @@ falso positivo). Viven en memoria: si reiniciás el backend, hay que volver a
 correrlo. Sus fingerprints son inventados, así que **no te van a reconocer a
 vos**; sirven de población alrededor para ver el top 3.
 
+## Desplegar / exponer
+
+Con Docker, y pensado para exponerlo por **Dev Tunnels** de VS Code (que un
+profe lo abra desde afuera sin perder el estado en memoria):
+
+```bash
+cd deploy
+docker compose up -d --build
+```
+
+Paso a paso del forward por Dev Tunnels y la alternativa hosteada en
+[deploy/README.md](deploy/README.md).
+
 ## Tests
 
 ```bash
@@ -108,6 +121,6 @@ docs/               arquitectura · experimentos · notas para el informe
 ## Estado
 
 Implementado: backend, tracker, chat, correlación, detector con historial en
-vivo, borrado de datos, tests, seed y ejecución local. **Pendiente:** el
-despliegue (docker-compose y proxy inverso) y completar la matriz de
-experimentos con corridas reales.
+vivo, borrado de datos, tests, seed, ejecución local y **despliegue con
+`docker compose` + Dev Tunnels** (ver [deploy/README.md](deploy/README.md)).
+**Pendiente:** completar la matriz de experimentos con corridas reales.

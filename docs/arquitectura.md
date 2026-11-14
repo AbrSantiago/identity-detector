@@ -23,11 +23,30 @@ defender el diseño.
   Motivo: con 3.14 todavía no hay wheels de `pydantic-core` y `uv` intenta
   compilarlo desde Rust, lo que falla en Windows sin el linker de MSVC. `uv`
   descarga una 3.12 administrada automáticamente.
-- **Despliegue: sin implementar.** El grupo había considerado Cloudflare Tunnel
-  en vez de Caddy, pero el despliegue (docker-compose, proxy inverso) quedó
-  fuera de lo implementado en este repo. Lo que sí hay es la ejecución local
-  con un comando (`run_local.py`): un proceso que despacha por `Host` para que
-  chat y detector sean orígenes distintos, sin modificar el backend.
+- **Despliegue: `docker compose` + Dev Tunnels de VS Code.** Tres servicios en
+  puertos distintos (backend 8000, chat 8080, detector 8081) para que el chat y
+  el detector sigan siendo orígenes distintos. Se exponen por Dev Tunnels
+  forwardeando los tres puertos como *public*; cada puerto queda en
+  `https://<id>-<puerto>.<cluster>.devtunnels.ms`. Ventaja sobre un host
+  gratuito: la demo corre en la propia máquina, así que **el estado en memoria
+  se mantiene** durante toda la defensa. Detalle en `deploy/README.md`.
+- **Config sin tocar URLs a mano.** El `config.js` de cada frontend se genera al
+  arrancar el contenedor (`deploy/static-entrypoint.sh`): si `API_BASE` está
+  vacío, el frontend deriva la URL del backend del host actual (en Dev Tunnels,
+  cambia el `-8080`/`-8081` del subdominio por `-8000`). Con dominio propio se
+  fija `API_BASE`. El CORS y el chequeo de Origin del WebSocket aceptan
+  `*.devtunnels.ms` vía `ALLOWED_ORIGIN_REGEX`, así que no hay que enumerar los
+  orígenes del túnel.
+- **Alternativa hosteada:** de los tiers gratuitos, Render (Docker) es el único
+  viable, pero **se duerme a los 15 min y pierde el estado en memoria** al
+  reiniciar; sirve despertándolo y recorriendo el seed antes de mostrarlo.
+  Fly.io ya no tiene free tier (2026) y Cloudflare no hostea bien un backend con
+  estado y WebSockets (sí sirve como túnel desde la propia máquina, como
+  alternativa a Dev Tunnels con dominio propio). Para ejecución local sin Docker
+  está `run_local.py`: un proceso que despacha por `Host` sobre `*.localhost`.
+- **Ejecución local sin Docker** (`run_local.py`): un proceso que despacha por
+  `Host` para que chat y detector sean orígenes distintos, sin modificar el
+  backend.
 - **Estado en memoria, un solo worker.** El estado vive en el proceso; con
   varios workers cada uno tendría su copia. Es intencional para la demo.
 

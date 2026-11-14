@@ -95,6 +95,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
+    # Regex opcional (p. ej. *.devtunnels.ms) para hosts dinámicos de túnel.
+    allow_origin_regex=settings.allowed_origin_regex or None,
     allow_credentials=False,  # no usamos cookies; el fp_id va en el cuerpo
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],

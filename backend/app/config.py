@@ -26,6 +26,13 @@ class Settings:
             "http://chat.localhost:8000,http://detector.localhost:8000",
         )
     )
+    # Regex opcional de orígenes permitidos (además de la lista exacta).
+    # Sirve cuando el host es dinámico: p. ej. al exponer por un túnel de
+    # VS Code, donde cada puerto queda en
+    # https://<id>-<puerto>.<cluster>.devtunnels.ms. Vacío = sin regex.
+    allowed_origin_regex: str = field(
+        default_factory=lambda: os.environ.get("ALLOWED_ORIGIN_REGEX", "").strip()
+    )
     # IPs de proxies en los que confiamos para leer X-Forwarded-For. Si el
     # request no viene de acá, ignoramos ese header (si no, cualquiera podría
     # falsear su IP mandando el header a mano).

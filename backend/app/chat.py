@@ -14,7 +14,9 @@ quedó registrado su fingerprint + red sin que medie ninguna cookie.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
+from functools import lru_cache
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
@@ -60,16 +62,30 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+@lru_cache(maxsize=4)
+def _compiled_origin_re(pattern: str) -> re.Pattern:
+    return re.compile(pattern)
+
+
 def _origin_allowed(ws: WebSocket) -> bool:
     """Chequeo de Origin para el WS (los browsers no aplican CORS a WebSocket).
 
-    Si hay orígenes configurados y el request trae un Origin que no está en la
-    lista, lo rechazamos. Si no hay Origin (cliente no-browser, tests), pasa.
+    Acepta el Origin si está en la lista exacta o si matchea el regex opcional
+    (p. ej. *.devtunnels.ms). Sin Origin (cliente no-browser, tests) pasa; y si
+    no hay ni lista ni regex, también (modo dev).
     """
     origin = ws.headers.get("origin")
-    if not origin or not settings.allowed_origins:
+    if not origin:
         return True
-    return origin in settings.allowed_origins
+    if origin in settings.allowed_origins:
+        return True
+    if settings.allowed_origin_regex and _compiled_origin_re(
+        settings.allowed_origin_regex
+    ).search(origin):
+        return True
+    if not settings.allowed_origins and not settings.allowed_origin_regex:
+        return True
+    return False
 
 
 @router.websocket("/ws/chat")

@@ -1,0 +1,10 @@
+# Normalización de fin de línea.
+* text=auto
+
+# Archivos que SIEMPRE se ejecutan en Linux (dentro de los contenedores):
+# forzamos LF, porque un script sh con CRLF rompe con "bad interpreter".
+*.sh         text eol=lf
+Dockerfile   text eol=lf
+*.Dockerfile text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
