@@ -28,6 +28,20 @@ from .store import store
 
 logger = logging.getLogger("identity_detector")
 
+# Privacidad: el access log de uvicorn escribe la IP completa de cada request.
+# Lo descartamos acá, en la app, para que valga sin importar cómo se lance
+# (run_local.py, docker, `uvicorn app.main:app` a mano).
+logging.getLogger("uvicorn.access").addFilter(lambda record: False)
+
+
+def _drop_websocket_client_lines(record: logging.LogRecord) -> bool:
+    # Los websockets no pasan por uvicorn.access: uvicorn los registra en
+    # uvicorn.error con la forma ('ip', puerto) - "WebSocket /ruta" [accepted].
+    return '- "WebSocket' not in record.getMessage()
+
+
+logging.getLogger("uvicorn.error").addFilter(_drop_websocket_client_lines)
+
 # tracker/fp.js está en la raíz del repo, dos niveles arriba de backend/app.
 TRACKER_PATH = Path(__file__).resolve().parents[2] / "tracker" / "fp.js"
 
