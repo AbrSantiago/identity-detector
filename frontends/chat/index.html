@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ágora · chat anónimo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- 1) Aviso de recolección de datos. Nada se envía hasta aceptar. -->
+    <section id="consent" class="screen consent" aria-live="polite">
+      <div class="consent-card">
+        <p class="wordmark">ágora</p>
+        <h1>Antes de entrar</h1>
+        <p class="lead">
+          Esto es una demostración académica sobre privacidad. Al entrar, este
+          sitio incluye un script de un tercero que mide características de tu
+          navegador y tu dispositivo, y el servidor observa tu conexión.
+        </p>
+        <ul class="what">
+          <li><span>Del navegador</span> canvas, GPU, audio, fuentes, pantalla, zona horaria, idiomas y más.</li>
+          <li><span>De la red</span> tu IP (guardada solo como bloque /24 o /64), tus headers y lo que exponga WebRTC.</li>
+          <li><span>Para qué</span> mostrar, desde otro sitio, que un seudónimo no te vuelve anónimo.</li>
+        </ul>
+        <p class="fine">
+          Los datos viven en memoria, con un tiempo de vida limitado, y podés
+          borrarlos cuando quieras. No se comparten con terceros ni se escriben
+          a disco. Participan solo integrantes del grupo e invitados.
+        </p>
+        <div class="consent-actions">
+          <button id="accept" class="btn btn-primary">Entiendo y acepto</button>
+          <a class="btn btn-ghost" href="about:blank">No, gracias</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2) Elección de nickname y avatar. -->
+    <section id="join" class="screen join" hidden>
+      <form id="join-form" class="join-card">
+        <p class="wordmark">ágora</p>
+        <h1>Elegí cómo aparecer</h1>
+        <label class="field">
+          <span>Nickname</span>
+          <input id="nickname" name="nickname" maxlength="40" required
+                 autocomplete="off" placeholder="como quieras que te vean" />
+        </label>
+        <div class="field">
+          <span>Avatar</span>
+          <div id="avatars" class="avatars" role="radiogroup" aria-label="Avatar"></div>
+        </div>
+        <button class="btn btn-primary" type="submit">Entrar a la sala</button>
+        <p id="join-status" class="join-status"></p>
+      </form>
+    </section>
+
+    <!-- 3) La sala de chat. -->
+    <section id="chat" class="screen chat" hidden>
+      <header class="chat-header">
+        <div class="brand">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="wordmark small">ágora</span>
+          <span class="pill" id="me-pill"></span>
+        </div>
+        <button id="forget" class="btn btn-ghost btn-sm">Borrar mis datos</button>
+      </header>
+      <ol id="messages" class="messages" aria-live="polite"></ol>
+      <form id="say-form" class="composer">
+        <input id="say" autocomplete="off" maxlength="1000"
+               placeholder="Escribí un mensaje…" />
+        <button class="btn btn-primary" type="submit">Enviar</button>
+      </form>
+    </section>
+
+    <!-- Carga: config -> tracker del backend (cross-origin, el "tercero") -> chat.js -->
+    <script src="config.js"></script>
+    <script>
+      (function () {
+        var base = window.IDENTITY_CONFIG.apiBase;
+        var tracker = document.createElement("script");
+        tracker.src = base + "/tracker/fp.js";
+        tracker.onload = function () {
+          var app = document.createElement("script");
+          app.src = "chat.js";
+          document.body.appendChild(app);
+        };
+        tracker.onerror = function () {
+          document.getElementById("join-status").textContent =
+            "No se pudo cargar el tracker desde el backend (" + base + ").";
+        };
+        document.body.appendChild(tracker);
+      })();
+    </script>
+  </body>
+</html>

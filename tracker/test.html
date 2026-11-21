@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tracker · página de prueba</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      h1 { font-size: 1.3rem; }
+      p { color: #94a3b8; }
+      #fpid {
+        font-family: ui-monospace, monospace;
+        color: #38bdf8;
+        word-break: break-all;
+      }
+      pre {
+        background: #1e293b;
+        padding: 1rem;
+        border-radius: 8px;
+        overflow: auto;
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+      .null { color: #f87171; }
+    </style>
+  </head>
+  <body>
+    <h1>Tracker — página de prueba</h1>
+    <p>
+      Esta página incluye <code>fp.js</code> y muestra el fingerprint completo
+      que recolecta. Sirve para verificar a mano en distintos navegadores. Los
+      campos en <span class="null">rojo</span> son <code>null</code> (API no
+      disponible o bloqueada — eso también es información).
+    </p>
+    <p><strong>fp_id:</strong> <span id="fpid">calculando…</span></p>
+    <pre id="out">Recolectando…</pre>
+
+    <!-- En la demo real esto apunta a https://<api>/tracker/fp.js; acá es local. -->
+    <script src="./fp.js"></script>
+    <script>
+      (async () => {
+        try {
+          const fp = await window.IdentityTracker.collect();
+          document.getElementById("fpid").textContent = fp.fp_id;
+          // Pintamos los null en rojo para que se vean de un vistazo.
+          const json = JSON.stringify(fp, null, 2).replace(
+            /: null/g,
+            ': <span class="null">null</span>'
+          );
+          document.getElementById("out").innerHTML = json;
+        } catch (e) {
+          document.getElementById("out").textContent = "ERROR: " + e;
+        }
+      })();
+    </script>
+  </body>
+</html>

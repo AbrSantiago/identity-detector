@@ -1,0 +1,63 @@
+name: identity-detector
+
+# Despliegue del TP3. Tres servicios en PUERTOS distintos para que el chat y el
+# detector sean ORÍGENES distintos (es la gracia de la demo). Pensado para
+# exponer por Dev Tunnels de VS Code (forward de los tres puertos) o para correr
+# en cualquier host con Docker.
+#
+# Correr:  cd deploy && docker compose up -d --build
+#   chat      -> http://localhost:8080
+#   detector  -> http://localhost:8081
+#   API/docs  -> http://localhost:8000/docs
+#
+# Verificá los valores resueltos con:  docker compose config
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    environment:
+      # Acepta cualquier origen *.devtunnels.ms sin configurar nada (zero-config
+      # para el túnel de VS Code). Para un dominio propio, además podés fijar
+      # ALLOWED_ORIGINS con los orígenes exactos del chat y el detector.
+      ALLOWED_ORIGIN_REGEX: "${ALLOWED_ORIGIN_REGEX:-https://.*\\.devtunnels\\.ms$$}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://localhost:8080,http://localhost:8081}"
+      TRUSTED_PROXIES: "${TRUSTED_PROXIES:-}"
+      DATA_TTL_HOURS: "${DATA_TTL_HOURS:-6}"
+      MATCH_THRESHOLD: "${MATCH_THRESHOLD:-0.35}"
+      CHAT_HISTORY_LIMIT: "${CHAT_HISTORY_LIMIT:-200}"
+      MATCH_HISTORY_LIMIT: "${MATCH_HISTORY_LIMIT:-500}"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  chat:
+    build:
+      context: ..
+      dockerfile: deploy/static.Dockerfile
+      args:
+        SITE: chat
+    environment:
+      # Vacío => el frontend deriva la URL del backend del host (Dev Tunnels).
+      # Con dominio propio: API_BASE=https://api.tudominio
+      API_BASE: "${API_BASE:-}"
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  detector:
+    build:
+      context: ..
+      dockerfile: deploy/static.Dockerfile
+      args:
+        SITE: detector
+    environment:
+      API_BASE: "${API_BASE:-}"
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+    depends_on:
+      - backend
